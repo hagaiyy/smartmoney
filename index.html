@@ -90,10 +90,8 @@
   .drill-toggle { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); user-select: none; }
   .drill-arrow { transition: transform 0.2s; display: inline-block; }
   .drill-arrow.open { transform: rotate(90deg); }
-
   .drill-panel { display: none; border-top: 1px solid var(--border2); }
   .drill-panel.open { display: block; }
-
   .drill-row { padding: 10px 18px; border-bottom: 1px solid var(--border); font-size: 12px; }
   .drill-row:last-child { border-bottom: none; }
   .drill-name { color: var(--text); margin-bottom: 3px; font-weight: 400; }
@@ -115,7 +113,39 @@
   .scan-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   thead tr { background: var(--surface2); border-bottom: 1px solid var(--border2); }
-  thead th { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 12px 16px; text-align: left; font-weight: 500; }
+
+  thead th {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  thead th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+  }
+
+  thead th.sortable:hover { color: var(--text); }
+  thead th.sortable.active { color: var(--accent); }
+
+  .sort-icon {
+    display: inline-block;
+    margin-left: 5px;
+    font-size: 9px;
+    opacity: 0.4;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+
+  thead th.sortable:hover .sort-icon { opacity: 0.7; }
+  thead th.sortable.active .sort-icon { opacity: 1; color: var(--accent); }
+
   tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
   tbody tr:last-child { border-bottom: none; }
   tbody tr:hover { background: rgba(255,255,255,0.03); }
@@ -181,7 +211,16 @@
       </div>
       <div class="scan-table-wrap">
         <table>
-          <thead><tr><th>Ticker</th><th>Signal</th><th>Recency</th><th>Net Flow</th><th>Key Insight</th><th>Date Range</th></tr></thead>
+          <thead>
+            <tr>
+              <th class="sortable active" onclick="sortBy('ticker')" id="th-ticker">Ticker <span class="sort-icon" id="si-ticker">▲</span></th>
+              <th class="sortable" onclick="sortBy('signal')" id="th-signal">Signal <span class="sort-icon" id="si-signal">⬍</span></th>
+              <th class="sortable" onclick="sortBy('recency')" id="th-recency">Recency <span class="sort-icon" id="si-recency">⬍</span></th>
+              <th class="sortable" onclick="sortBy('flow')" id="th-flow">Net Flow <span class="sort-icon" id="si-flow">⬍</span></th>
+              <th>Key Insight</th>
+              <th>Date Range</th>
+            </tr>
+          </thead>
           <tbody id="tbody-scan"></tbody>
         </table>
       </div>
@@ -199,6 +238,11 @@
 
 <script>
 const API = 'https://smart-money-backend.vercel.app/';
+
+let allRows = [];
+let runDate = '';
+let sortCol = 'ticker';
+let sortAsc = true;
 
 function switchTab(which) {
   ['buys','sells'].forEach(t => {
@@ -239,22 +283,86 @@ function contextClass(ctx) {
   return 'routine';
 }
 
-// Calculate sandclock rating from a date range string like "2026-03-13 – 2026-03-18"
-// Uses the most recent date (end date) to calculate age from today
-function sandclocks(dateRange, runDate) {
+function sandclocks(dateRange, rDate) {
   try {
     const parts = dateRange.split('–').map(s => s.trim());
     const latest = parts[parts.length - 1];
-    const base = runDate ? new Date(runDate) : new Date();
+    const base = rDate ? new Date(rDate) : new Date();
     const txDate = new Date(latest);
     const days = Math.round((base - txDate) / (1000 * 60 * 60 * 24));
-    if (days <= 5)  return '⏳';
-    if (days <= 14) return '⏳⏳';
-    if (days <= 30) return '⏳⏳⏳';
-    return '⏳⏳⏳⏳';
+    if (days <= 5)  return { icon: '⏳',         val: 1 };
+    if (days <= 14) return { icon: '⏳⏳',        val: 2 };
+    if (days <= 30) return { icon: '⏳⏳⏳',       val: 3 };
+    return              { icon: '⏳⏳⏳⏳',      val: 4 };
   } catch(e) {
-    return '⏳⏳';
+    return { icon: '⏳⏳', val: 2 };
   }
+}
+
+// Sort state
+function sortBy(col) {
+  if (sortCol === col) {
+    sortAsc = !sortAsc;
+  } else {
+    sortCol = col;
+    sortAsc = true;
+  }
+  updateSortHeaders();
+  renderTable();
+}
+
+function updateSortHeaders() {
+  ['ticker','signal','recency','flow'].forEach(col => {
+    const th = document.getElementById('th-' + col);
+    const si = document.getElementById('si-' + col);
+    if (col === sortCol) {
+      th.classList.add('active');
+      si.textContent = sortAsc ? '▲' : '▼';
+    } else {
+      th.classList.remove('active');
+      si.textContent = '⬍';
+    }
+  });
+}
+
+function renderTable() {
+  const sorted = [...allRows].sort((a, b) => {
+    let va, vb;
+    if (sortCol === 'ticker') {
+      va = a.ticker; vb = b.ticker;
+      return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    }
+    if (sortCol === 'signal') {
+      va = isBuy(a.signal) ? 0 : 1;
+      vb = isBuy(b.signal) ? 0 : 1;
+      return sortAsc ? va - vb : vb - va;
+    }
+    if (sortCol === 'recency') {
+      va = sandclocks(a.range, runDate).val;
+      vb = sandclocks(b.range, runDate).val;
+      return sortAsc ? va - vb : vb - va;
+    }
+    if (sortCol === 'flow') {
+      va = parseAmt(a.flow);
+      vb = parseAmt(b.flow);
+      return sortAsc ? va - vb : vb - va;
+    }
+    return 0;
+  });
+
+  document.getElementById('tbody-scan').innerHTML = sorted.map(r => {
+    const buy = isBuy(r.signal);
+    const cls = buy ? 'buy' : 'sell';
+    const clocks = sandclocks(r.range, runDate);
+    return `<tr>
+      <td class="td-ticker ${cls}">${r.ticker}</td>
+      <td><span class="signal-badge ${cls}">${r.signal}</span></td>
+      <td class="strength">${clocks.icon}</td>
+      <td class="flow ${cls}">${fmtMoney(r.flow)}</td>
+      <td class="insight">${r.insight}</td>
+      <td class="daterange">${r.range}</td>
+    </tr>`;
+  }).join('');
 }
 
 function parseConvictionGrouped(text) {
@@ -303,56 +411,46 @@ function parseTable(text) {
   }).filter(r => r.ticker && r.ticker !== 'SYM' && r.ticker !== 'Ticker');
 }
 
-function buyCard(g, idx, runDate) {
+function buyCard(g, idx, rDate) {
   const id = 'buy-' + idx;
-  // Use run date as proxy for "today" since hot buys are last 14 days
-  const clocks = sandclocks(runDate + ' – ' + runDate, runDate);
   const drillRows = g.txs.map(tx => `
     <div class="drill-row">
       <div class="drill-name">${tx.who}</div>
       <div class="drill-meta">
         <span class="drill-amt buy">${fmtMoney(tx.amt)}</span>
-        <span class="drill-date">${runDate}</span>
+        <span class="drill-date">${rDate}</span>
       </div>
-      ${tx.why ? `<div class="drill-detail" style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic">${tx.why}</div>` : ''}
+      ${tx.why ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic">${tx.why}</div>` : ''}
     </div>`).join('');
-
   return `<div class="agg-card buy">
     <div class="agg-card-top" onclick="toggleDrill('${id}')">
       <div class="agg-ticker buy">${g.ticker}</div>
       <div class="agg-total buy">${fmtMoney(g.total)}</div>
       <div class="agg-txcount">${g.count} transaction${g.count>1?'s':''}</div>
-      <div class="drill-toggle">
-        <span class="drill-arrow" id="arrow-${id}">▶</span>
-        <span id="label-${id}">show transactions</span>
-      </div>
+      <div class="drill-toggle"><span class="drill-arrow" id="arrow-${id}">▶</span><span id="label-${id}">show transactions</span></div>
     </div>
     <div class="drill-panel" id="drill-${id}">${drillRows}</div>
   </div>`;
 }
 
-function sellCard(g, idx, runDate) {
+function sellCard(g, idx, rDate) {
   const id = 'sell-' + idx;
   const drillRows = g.txs.map(tx => `
     <div class="drill-row">
       <div class="drill-name">${tx.who}</div>
       <div class="drill-meta">
         <span class="drill-amt sell">${fmtMoney(tx.amt)}</span>
-        <span class="drill-date">${runDate}</span>
+        <span class="drill-date">${rDate}</span>
       </div>
       <span class="ctx-badge ${contextClass(tx.ctx)}">${tx.ctx}</span>
     </div>`).join('');
-
   return `<div class="agg-card sell">
     <div class="agg-card-top" onclick="toggleDrill('${id}')">
       <div class="agg-ticker sell">${g.ticker}</div>
       <div class="agg-total sell">${fmtMoney(g.total)}</div>
       <div class="agg-txcount">${g.count} transaction${g.count>1?'s':''}</div>
       <span class="ctx-badge ${contextClass(g.ctx)}">${g.ctx}</span>
-      <div class="drill-toggle">
-        <span class="drill-arrow" id="arrow-${id}">▶</span>
-        <span id="label-${id}">show transactions</span>
-      </div>
+      <div class="drill-toggle"><span class="drill-arrow" id="arrow-${id}">▶</span><span id="label-${id}">show transactions</span></div>
     </div>
     <div class="drill-panel" id="drill-${id}">${drillRows}</div>
   </div>`;
@@ -364,7 +462,7 @@ async function load() {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
-    const runDate = data.run_date || '';
+    runDate = data.run_date || '';
     document.getElementById('run-date').innerHTML =
       `<span class="status-dot"></span>Last run: <strong>${runDate}</strong>`;
 
@@ -385,21 +483,9 @@ async function load() {
       ? sells.map((g,i) => sellCard(g, i, runDate)).join('')
       : '<div class="none-msg">No notable sells in the last 14 days.</div>';
 
-    const rows = parseTable(p3).sort((a,b) => a.ticker.localeCompare(b.ticker));
-    document.getElementById('cnt-scan').textContent = rows.length + ' stocks';
-    document.getElementById('tbody-scan').innerHTML = rows.map(r => {
-      const buy = isBuy(r.signal);
-      const cls = buy ? 'buy' : 'sell';
-      const clocks = sandclocks(r.range, runDate);
-      return `<tr>
-        <td class="td-ticker ${cls}">${r.ticker}</td>
-        <td><span class="signal-badge ${cls}">${r.signal}</span></td>
-        <td class="strength">${clocks}</td>
-        <td class="flow ${cls}">${fmtMoney(r.flow)}</td>
-        <td class="insight">${r.insight}</td>
-        <td class="daterange">${r.range}</td>
-      </tr>`;
-    }).join('');
+    allRows = parseTable(p3);
+    document.getElementById('cnt-scan').textContent = allRows.length + ' stocks';
+    renderTable();
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'block';
