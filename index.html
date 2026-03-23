@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -43,10 +43,21 @@
   .logo { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 3px; line-height: 1; background: linear-gradient(135deg, #fff 0%, #7b5ea7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
   .logo span { background: linear-gradient(135deg, #00e5a0 0%, #7b5ea7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
   .header-meta { font-size: 12px; color: var(--muted); margin-top: 4px; letter-spacing: 0.5px; }
+
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+
   .last-run { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); text-align: right; }
   .last-run strong { color: var(--buy); font-weight: 500; }
   .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--buy); margin-right: 6px; animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* Language toggle */
+  .lang-toggle { display: flex; align-items: center; gap: 4px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 4px; }
+  .lang-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 8px; border-radius: 6px; opacity: 0.4; transition: opacity 0.2s, background 0.2s; line-height: 1; }
+  .lang-btn:hover { opacity: 0.7; }
+  .lang-btn.active { opacity: 1; background: rgba(255,255,255,0.08); }
+  .lang-translating { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); display: none; animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
   #loading { text-align: center; padding: 120px 0; font-family: 'DM Mono', monospace; font-size: 13px; color: var(--muted); letter-spacing: 2px; }
   .spinner { width: 32px; height: 32px; border: 1px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 20px; }
@@ -113,36 +124,11 @@
   .scan-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   thead tr { background: var(--surface2); border-bottom: 1px solid var(--border2); }
-
-  thead th {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--muted);
-    padding: 12px 16px;
-    text-align: left;
-    font-weight: 500;
-    white-space: nowrap;
-  }
-
-  thead th.sortable {
-    cursor: pointer;
-    user-select: none;
-    transition: color 0.15s;
-  }
-
+  thead th { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 12px 16px; text-align: left; font-weight: 500; white-space: nowrap; }
+  thead th.sortable { cursor: pointer; user-select: none; transition: color 0.15s; }
   thead th.sortable:hover { color: var(--text); }
   thead th.sortable.active { color: var(--accent); }
-
-  .sort-icon {
-    display: inline-block;
-    margin-left: 5px;
-    font-size: 9px;
-    opacity: 0.4;
-    transition: opacity 0.15s, transform 0.15s;
-  }
-
+  .sort-icon { display: inline-block; margin-left: 5px; font-size: 9px; opacity: 0.4; transition: opacity 0.15s; }
   thead th.sortable:hover .sort-icon { opacity: 0.7; }
   thead th.sortable.active .sort-icon { opacity: 1; color: var(--accent); }
 
@@ -172,6 +158,15 @@
 
   .none-msg { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); padding: 24px; text-align: center; border: 1px dashed var(--border2); border-radius: 8px; }
 
+  /* Hebrew RTL */
+  body.rtl { direction: rtl; }
+  body.rtl .header-right { align-items: flex-start; }
+  body.rtl .last-run { text-align: left; }
+  body.rtl .section-count { margin-left: 0; margin-right: auto; }
+  body.rtl thead th { text-align: right; }
+  body.rtl td { text-align: right; }
+  body.rtl .drill-meta { flex-direction: row-reverse; }
+
   @media (max-width: 600px) {
     .logo { font-size: 36px; }
     .cards-grid { grid-template-columns: 1fr 1fr; }
@@ -183,21 +178,28 @@
   <header>
     <div>
       <div class="logo">Smart<span>Money</span></div>
-      <div class="header-meta">Insider Trading Intelligence · SEC Form 4 · AI Analysis</div>
+      <div class="header-meta" id="header-meta">Insider Trading Intelligence · SEC Form 4 · AI Analysis</div>
     </div>
-    <div class="last-run" id="run-date"><span class="status-dot"></span>Loading...</div>
+    <div class="header-right">
+      <div class="lang-toggle">
+        <button class="lang-btn active" onclick="setLang('en')" id="btn-en" title="English">🇺🇸</button>
+        <button class="lang-btn" onclick="setLang('he')" id="btn-he" title="עברית">🇮🇱</button>
+      </div>
+      <span class="lang-translating" id="translating-msg">מתרגם...</span>
+      <div class="last-run" id="run-date"><span class="status-dot"></span>Loading...</div>
+    </div>
   </header>
 
-  <div id="loading"><div class="spinner"></div>FETCHING INTELLIGENCE...</div>
+  <div id="loading"><div class="spinner"></div><span id="loading-msg">FETCHING INTELLIGENCE...</span></div>
   <div id="error"></div>
 
   <div id="content" style="display:none">
     <div class="section" id="sec-hot">
-      <div class="hot-label">🔥 Hot Signals</div>
-      <div class="hot-note">Insider activity from the last 14 days only · aggregated by stock · click any card to drill down</div>
+      <div class="hot-label" id="lbl-hot">🔥 Hot Signals</div>
+      <div class="hot-note" id="lbl-hot-note">Insider activity from the last 14 days only · aggregated by stock · click any card to drill down</div>
       <div class="tabs">
-        <button class="tab active buy" onclick="switchTab('buys')" id="tab-buys">📈 Hot Buys <span class="tab-count" id="cnt-buys">0</span></button>
-        <button class="tab sell" onclick="switchTab('sells')" id="tab-sells">📉 Hot Sells <span class="tab-count" id="cnt-sells">0</span></button>
+        <button class="tab active buy" onclick="switchTab('buys')" id="tab-buys">📈 <span id="lbl-hot-buys">Hot Buys</span> <span class="tab-count" id="cnt-buys">0</span></button>
+        <button class="tab sell" onclick="switchTab('sells')" id="tab-sells">📉 <span id="lbl-hot-sells">Hot Sells</span> <span class="tab-count" id="cnt-sells">0</span></button>
       </div>
       <div class="tab-panel active" id="panel-buys"><div class="cards-grid" id="grid-buys"></div></div>
       <div class="tab-panel" id="panel-sells"><div class="cards-grid" id="grid-sells"></div></div>
@@ -206,31 +208,31 @@
     <div class="section" id="sec-scan">
       <div class="section-header">
         <span style="font-size:18px">📊</span>
-        <span class="section-title">Market Scan · Last 45 Days</span>
+        <span class="section-title" id="lbl-scan">Market Scan · Last 45 Days</span>
         <span class="section-count" id="cnt-scan"></span>
       </div>
       <div class="scan-table-wrap">
         <table>
           <thead>
             <tr>
-              <th class="sortable active" onclick="sortBy('ticker')" id="th-ticker">Ticker <span class="sort-icon" id="si-ticker">▲</span></th>
-              <th class="sortable" onclick="sortBy('signal')" id="th-signal">Signal <span class="sort-icon" id="si-signal">⬍</span></th>
-              <th class="sortable" onclick="sortBy('recency')" id="th-recency">Recency <span class="sort-icon" id="si-recency">⬍</span></th>
-              <th class="sortable" onclick="sortBy('flow')" id="th-flow">Net Flow <span class="sort-icon" id="si-flow">⬍</span></th>
-              <th>Key Insight</th>
-              <th>Date Range</th>
+              <th class="sortable active" onclick="sortBy('ticker')" id="th-ticker"><span id="lbl-col-ticker">Ticker</span> <span class="sort-icon" id="si-ticker">▲</span></th>
+              <th class="sortable" onclick="sortBy('signal')" id="th-signal"><span id="lbl-col-signal">Signal</span> <span class="sort-icon" id="si-signal">⬍</span></th>
+              <th class="sortable" onclick="sortBy('recency')" id="th-recency"><span id="lbl-col-recency">Recency</span> <span class="sort-icon" id="si-recency">⬍</span></th>
+              <th class="sortable" onclick="sortBy('flow')" id="th-flow"><span id="lbl-col-flow">Net Flow</span> <span class="sort-icon" id="si-flow">⬍</span></th>
+              <th><span id="lbl-col-insight">Key Insight</span></th>
+              <th><span id="lbl-col-range">Date Range</span></th>
             </tr>
           </thead>
           <tbody id="tbody-scan"></tbody>
         </table>
       </div>
       <div class="legend">
-        <div class="legend-item">⏳ Under 5 days</div>
-        <div class="legend-item">⏳⏳ 5–14 days</div>
-        <div class="legend-item">⏳⏳⏳ 15–30 days</div>
-        <div class="legend-item">⏳⏳⏳⏳ 31–45 days</div>
-        <div class="legend-item"><span style="color:var(--buy)">📈 BUY</span> Insider buying</div>
-        <div class="legend-item"><span style="color:var(--sell)">📉 SELL</span> Insider selling</div>
+        <div class="legend-item" id="leg1">⏳ <span id="lbl-leg1">Under 5 days</span></div>
+        <div class="legend-item" id="leg2">⏳⏳ <span id="lbl-leg2">5–14 days</span></div>
+        <div class="legend-item" id="leg3">⏳⏳⏳ <span id="lbl-leg3">15–30 days</span></div>
+        <div class="legend-item" id="leg4">⏳⏳⏳⏳ <span id="lbl-leg4">31–45 days</span></div>
+        <div class="legend-item"><span style="color:var(--buy)">📈 BUY</span> <span id="lbl-buy-desc">Insider buying</span></div>
+        <div class="legend-item"><span style="color:var(--sell)">📉 SELL</span> <span id="lbl-sell-desc">Insider selling</span></div>
       </div>
     </div>
   </div>
@@ -243,6 +245,138 @@ let allRows = [];
 let runDate = '';
 let sortCol = 'ticker';
 let sortAsc = true;
+let currentLang = 'en';
+let hebrewOutput = null;
+let englishOutput = null;
+
+const translations = {
+  en: {
+    meta: 'Insider Trading Intelligence · SEC Form 4 · AI Analysis',
+    loading: 'FETCHING INTELLIGENCE...',
+    hotLabel: '🔥 Hot Signals',
+    hotNote: 'Insider activity from the last 14 days only · aggregated by stock · click any card to drill down',
+    hotBuys: 'Hot Buys',
+    hotSells: 'Hot Sells',
+    scan: 'Market Scan · Last 45 Days',
+    ticker: 'Ticker',
+    signal: 'Signal',
+    recency: 'Recency',
+    flow: 'Net Flow',
+    insight: 'Key Insight',
+    range: 'Date Range',
+    leg1: 'Under 5 days',
+    leg2: '5–14 days',
+    leg3: '15–30 days',
+    leg4: '31–45 days',
+    buyDesc: 'Insider buying',
+    sellDesc: 'Insider selling',
+    showTx: 'show transactions',
+    hideTx: 'hide transactions',
+    noBuys: 'No hot buy signals in the last 14 days.',
+    noSells: 'No notable sells in the last 14 days.',
+    lastRun: 'Last run',
+    translating: 'Translating...',
+    stocks: 'stocks',
+    transactions: 'transaction',
+    transactionsP: 'transactions',
+  },
+  he: {
+    meta: 'מודיעין מסחר פנים · SEC Form 4 · ניתוח AI',
+    loading: 'טוען נתונים...',
+    hotLabel: '🔥 סיגנלים חמים',
+    hotNote: 'פעילות פנים מ-14 הימים האחרונים בלבד · מקובץ לפי מניה · לחץ על כרטיס לפירוט',
+    hotBuys: 'קניות חמות',
+    hotSells: 'מכירות חמות',
+    scan: 'סקירת שוק · 45 ימים אחרונים',
+    ticker: 'סימול',
+    signal: 'סיגנל',
+    recency: 'עדכניות',
+    flow: 'תזרים נטו',
+    insight: 'תובנה מרכזית',
+    range: 'טווח תאריכים',
+    leg1: 'עד 5 ימים',
+    leg2: '5–14 ימים',
+    leg3: '15–30 ימים',
+    leg4: '31–45 ימים',
+    buyDesc: 'קנייה פנימית',
+    sellDesc: 'מכירה פנימית',
+    showTx: 'הצג עסקאות',
+    hideTx: 'הסתר עסקאות',
+    noBuys: 'אין סיגנלי קנייה חמים ב-14 הימים האחרונים.',
+    noSells: 'אין מכירות בולטות ב-14 הימים האחרונים.',
+    lastRun: 'ריצה אחרונה',
+    translating: 'מתרגם...',
+    stocks: 'מניות',
+    transactions: 'עסקה',
+    transactionsP: 'עסקאות',
+  }
+};
+
+function t(key) { return translations[currentLang][key] || translations.en[key]; }
+
+function applyLabels() {
+  const T = translations[currentLang];
+  document.getElementById('header-meta').textContent = T.meta;
+  document.getElementById('lbl-hot').textContent = T.hotLabel;
+  document.getElementById('lbl-hot-note').textContent = T.hotNote;
+  document.getElementById('lbl-hot-buys').textContent = T.hotBuys;
+  document.getElementById('lbl-hot-sells').textContent = T.hotSells;
+  document.getElementById('lbl-scan').textContent = T.scan;
+  document.getElementById('lbl-col-ticker').textContent = T.ticker;
+  document.getElementById('lbl-col-signal').textContent = T.signal;
+  document.getElementById('lbl-col-recency').textContent = T.recency;
+  document.getElementById('lbl-col-flow').textContent = T.flow;
+  document.getElementById('lbl-col-insight').textContent = T.insight;
+  document.getElementById('lbl-col-range').textContent = T.range;
+  document.getElementById('lbl-leg1').textContent = T.leg1;
+  document.getElementById('lbl-leg2').textContent = T.leg2;
+  document.getElementById('lbl-leg3').textContent = T.leg3;
+  document.getElementById('lbl-leg4').textContent = T.leg4;
+  document.getElementById('lbl-buy-desc').textContent = T.buyDesc;
+  document.getElementById('lbl-sell-desc').textContent = T.sellDesc;
+
+  // RTL
+  document.body.classList.toggle('rtl', currentLang === 'he');
+  document.documentElement.lang = currentLang;
+  document.documentElement.dir = currentLang === 'he' ? 'rtl' : 'ltr';
+}
+
+async function setLang(lang) {
+  if (lang === currentLang) return;
+
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.getElementById('btn-he').classList.toggle('active', lang === 'he');
+
+  currentLang = lang;
+  applyLabels();
+
+  if (lang === 'he' && !hebrewOutput) {
+    // Translate via backend
+    document.getElementById('translating-msg').style.display = 'inline';
+    try {
+      const res = await fetch(API + 'translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: englishOutput })
+      });
+      const data = await res.json();
+      if (data.translated) {
+        hebrewOutput = data.translated;
+      }
+    } catch(e) {
+      console.error('Translation failed:', e);
+    }
+    document.getElementById('translating-msg').style.display = 'none';
+  }
+
+  rebuildCards();
+  renderTable();
+}
+
+function getCurrentOutput() {
+  if (currentLang === 'he' && hebrewOutput) return hebrewOutput;
+  return englishOutput;
+}
 
 function switchTab(which) {
   ['buys','sells'].forEach(t => {
@@ -257,10 +391,10 @@ function toggleDrill(id) {
   const label = document.getElementById('label-' + id);
   const isOpen = panel.classList.toggle('open');
   arrow.classList.toggle('open', isOpen);
-  label.textContent = isOpen ? 'hide transactions' : 'show transactions';
+  label.textContent = isOpen ? t('hideTx') : t('showTx');
 }
 
-function isBuy(s) { return s.includes('BUY') || s.includes('📈'); }
+function isBuy(s) { return s.includes('BUY') || s.includes('📈') || s.includes('קנייה') || s.includes('קנה'); }
 
 function fmtMoney(raw) {
   const clean = String(raw).replace(/[^0-9.\-]/g, '');
@@ -278,8 +412,8 @@ function parseAmt(str) { return parseFloat(String(str).replace(/[^0-9.\-]/g, '')
 
 function contextClass(ctx) {
   const c = (ctx||'').toLowerCase();
-  if (c.includes('panic')) return 'panic';
-  if (c.includes('profit')) return 'profit';
+  if (c.includes('panic') || c.includes('פאניקה')) return 'panic';
+  if (c.includes('profit') || c.includes('רווח')) return 'profit';
   return 'routine';
 }
 
@@ -290,23 +424,15 @@ function sandclocks(dateRange, rDate) {
     const base = rDate ? new Date(rDate) : new Date();
     const txDate = new Date(latest);
     const days = Math.round((base - txDate) / (1000 * 60 * 60 * 24));
-    if (days <= 5)  return { icon: '⏳',         val: 1 };
-    if (days <= 14) return { icon: '⏳⏳',        val: 2 };
-    if (days <= 30) return { icon: '⏳⏳⏳',       val: 3 };
-    return              { icon: '⏳⏳⏳⏳',      val: 4 };
-  } catch(e) {
-    return { icon: '⏳⏳', val: 2 };
-  }
+    if (days <= 5)  return { icon: '⏳',       val: 1 };
+    if (days <= 14) return { icon: '⏳⏳',      val: 2 };
+    if (days <= 30) return { icon: '⏳⏳⏳',     val: 3 };
+    return              { icon: '⏳⏳⏳⏳',   val: 4 };
+  } catch(e) { return { icon: '⏳⏳', val: 2 }; }
 }
 
-// Sort state
 function sortBy(col) {
-  if (sortCol === col) {
-    sortAsc = !sortAsc;
-  } else {
-    sortCol = col;
-    sortAsc = true;
-  }
+  if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = true; }
   updateSortHeaders();
   renderTable();
 }
@@ -315,54 +441,9 @@ function updateSortHeaders() {
   ['ticker','signal','recency','flow'].forEach(col => {
     const th = document.getElementById('th-' + col);
     const si = document.getElementById('si-' + col);
-    if (col === sortCol) {
-      th.classList.add('active');
-      si.textContent = sortAsc ? '▲' : '▼';
-    } else {
-      th.classList.remove('active');
-      si.textContent = '⬍';
-    }
+    if (col === sortCol) { th.classList.add('active'); si.textContent = sortAsc ? '▲' : '▼'; }
+    else { th.classList.remove('active'); si.textContent = '⬍'; }
   });
-}
-
-function renderTable() {
-  const sorted = [...allRows].sort((a, b) => {
-    let va, vb;
-    if (sortCol === 'ticker') {
-      va = a.ticker; vb = b.ticker;
-      return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
-    }
-    if (sortCol === 'signal') {
-      va = isBuy(a.signal) ? 0 : 1;
-      vb = isBuy(b.signal) ? 0 : 1;
-      return sortAsc ? va - vb : vb - va;
-    }
-    if (sortCol === 'recency') {
-      va = sandclocks(a.range, runDate).val;
-      vb = sandclocks(b.range, runDate).val;
-      return sortAsc ? va - vb : vb - va;
-    }
-    if (sortCol === 'flow') {
-      va = parseAmt(a.flow);
-      vb = parseAmt(b.flow);
-      return sortAsc ? va - vb : vb - va;
-    }
-    return 0;
-  });
-
-  document.getElementById('tbody-scan').innerHTML = sorted.map(r => {
-    const buy = isBuy(r.signal);
-    const cls = buy ? 'buy' : 'sell';
-    const clocks = sandclocks(r.range, runDate);
-    return `<tr>
-      <td class="td-ticker ${cls}">${r.ticker}</td>
-      <td><span class="signal-badge ${cls}">${r.signal}</span></td>
-      <td class="strength">${clocks.icon}</td>
-      <td class="flow ${cls}">${fmtMoney(r.flow)}</td>
-      <td class="insight">${r.insight}</td>
-      <td class="daterange">${r.range}</td>
-    </tr>`;
-  }).join('');
 }
 
 function parseConvictionGrouped(text) {
@@ -372,8 +453,10 @@ function parseConvictionGrouped(text) {
     const ticker = (l.match(/\*\*\$(\w+)\*\*/) || [])[1] || '';
     const amtRaw = (l.match(/\|\s*([+\-]\$[\d,\.]+)/) || [])[1] || '0';
     const amt = parseAmt(amtRaw);
-    const who = (l.match(/\*\*Who:\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
-    const why = (l.match(/\*\*Why:\*\*\s*(.+)$/) || [])[1]?.trim() || '';
+    const whoMatch = l.match(/\*\*(?:Who|מי):\*\*\s*([^|]+)/);
+    const who = whoMatch ? whoMatch[1].trim() : '';
+    const whyMatch = l.match(/\*\*(?:Why|למה):\*\*\s*(.+)$/);
+    const why = whyMatch ? whyMatch[1].trim() : '';
     if (!ticker) return;
     if (!map[ticker]) map[ticker] = { ticker, total: 0, count: 0, txs: [] };
     map[ticker].total += amt;
@@ -390,13 +473,15 @@ function parseDumpsGrouped(text) {
     const ticker = (l.match(/\*\*\$(\w+)\*\*/) || [])[1] || '';
     const amtRaw = (l.match(/\|\s*([+\-]\$[\d,\.]+)/) || [])[1] || '0';
     const amt = parseAmt(amtRaw);
-    const who = (l.match(/\*\*Who:\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
-    const ctx = (l.match(/\*\*Context:\*\*\s*(.+)$/) || [])[1]?.trim() || '';
+    const whoMatch = l.match(/\*\*(?:Who|מי):\*\*\s*([^|]+)/);
+    const who = whoMatch ? whoMatch[1].trim() : '';
+    const ctxMatch = l.match(/\*\*(?:Context|הקשר):\*\*\s*(.+)$/);
+    const ctx = ctxMatch ? ctxMatch[1].trim() : '';
     if (!ticker) return;
     if (!map[ticker]) map[ticker] = { ticker, total: 0, count: 0, ctx, txs: [] };
     map[ticker].total += amt;
     map[ticker].count++;
-    if (ctx && ctx !== 'Routine') map[ticker].ctx = ctx;
+    if (ctx && !ctx.toLowerCase().includes('routine') && !ctx.includes('שגרה')) map[ticker].ctx = ctx;
     map[ticker].txs.push({ who, ctx, amt });
   });
   return Object.values(map).sort((a,b) => a.total - b.total);
@@ -408,17 +493,22 @@ function parseTable(text) {
   return lines.slice(1).map(l => {
     const c = l.split('|').map(x => x.trim()).filter(Boolean);
     return { ticker: c[0]||'', signal: c[1]||'', strength: c[2]||'', flow: c[3]||'', insight: c[4]||'', range: c[5]||'' };
-  }).filter(r => r.ticker && r.ticker !== 'SYM' && r.ticker !== 'Ticker');
+  }).filter(r => r.ticker && r.ticker !== 'SYM' && r.ticker !== 'Ticker' && r.ticker !== 'סימול');
 }
 
-function buyCard(g, idx, rDate) {
+function txCount(n) {
+  if (currentLang === 'he') return n + ' ' + (n === 1 ? t('transactions') : t('transactionsP'));
+  return n + ' ' + (n === 1 ? t('transactions') : t('transactionsP'));
+}
+
+function buyCard(g, idx) {
   const id = 'buy-' + idx;
   const drillRows = g.txs.map(tx => `
     <div class="drill-row">
       <div class="drill-name">${tx.who}</div>
       <div class="drill-meta">
         <span class="drill-amt buy">${fmtMoney(tx.amt)}</span>
-        <span class="drill-date">${rDate}</span>
+        <span class="drill-date">${runDate}</span>
       </div>
       ${tx.why ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic">${tx.why}</div>` : ''}
     </div>`).join('');
@@ -426,21 +516,21 @@ function buyCard(g, idx, rDate) {
     <div class="agg-card-top" onclick="toggleDrill('${id}')">
       <div class="agg-ticker buy">${g.ticker}</div>
       <div class="agg-total buy">${fmtMoney(g.total)}</div>
-      <div class="agg-txcount">${g.count} transaction${g.count>1?'s':''}</div>
-      <div class="drill-toggle"><span class="drill-arrow" id="arrow-${id}">▶</span><span id="label-${id}">show transactions</span></div>
+      <div class="agg-txcount">${txCount(g.count)}</div>
+      <div class="drill-toggle"><span class="drill-arrow" id="arrow-${id}">▶</span><span id="label-${id}">${t('showTx')}</span></div>
     </div>
     <div class="drill-panel" id="drill-${id}">${drillRows}</div>
   </div>`;
 }
 
-function sellCard(g, idx, rDate) {
+function sellCard(g, idx) {
   const id = 'sell-' + idx;
   const drillRows = g.txs.map(tx => `
     <div class="drill-row">
       <div class="drill-name">${tx.who}</div>
       <div class="drill-meta">
         <span class="drill-amt sell">${fmtMoney(tx.amt)}</span>
-        <span class="drill-date">${rDate}</span>
+        <span class="drill-date">${runDate}</span>
       </div>
       <span class="ctx-badge ${contextClass(tx.ctx)}">${tx.ctx}</span>
     </div>`).join('');
@@ -448,12 +538,62 @@ function sellCard(g, idx, rDate) {
     <div class="agg-card-top" onclick="toggleDrill('${id}')">
       <div class="agg-ticker sell">${g.ticker}</div>
       <div class="agg-total sell">${fmtMoney(g.total)}</div>
-      <div class="agg-txcount">${g.count} transaction${g.count>1?'s':''}</div>
+      <div class="agg-txcount">${txCount(g.count)}</div>
       <span class="ctx-badge ${contextClass(g.ctx)}">${g.ctx}</span>
-      <div class="drill-toggle"><span class="drill-arrow" id="arrow-${id}">▶</span><span id="label-${id}">show transactions</span></div>
+      <div class="drill-toggle"><span class="drill-arrow" id="arrow-${id}">▶</span><span id="label-${id}">${t('showTx')}</span></div>
     </div>
     <div class="drill-panel" id="drill-${id}">${drillRows}</div>
   </div>`;
+}
+
+function rebuildCards() {
+  const output = getCurrentOutput();
+  if (!output) return;
+  const p1 = output.split('### Part 2')[0] || output.split('### חלק 2')[0] || '';
+  const p2raw = output.includes('### Part 2') ? output.split('### Part 2')[1] : (output.split('### חלק 2')[1] || '');
+  const p2 = p2raw.split('### Part 3')[0].split('### חלק 3')[0] || '';
+
+  const buys = parseConvictionGrouped(p1);
+  document.getElementById('cnt-buys').textContent = buys.length;
+  document.getElementById('grid-buys').innerHTML = buys.length
+    ? buys.map((g,i) => buyCard(g,i)).join('')
+    : `<div class="none-msg">${t('noBuys')}</div>`;
+
+  const sells = parseDumpsGrouped(p2);
+  document.getElementById('cnt-sells').textContent = sells.length;
+  document.getElementById('grid-sells').innerHTML = sells.length
+    ? sells.map((g,i) => sellCard(g,i)).join('')
+    : `<div class="none-msg">${t('noSells')}</div>`;
+}
+
+function renderTable() {
+  const output = getCurrentOutput();
+  if (!output) return;
+  const p3 = output.includes('### Part 3') ? output.split('### Part 3')[1] : (output.split('### חלק 3')[1] || '');
+  const rows = parseTable(p3);
+
+  const sorted = [...rows].sort((a,b) => {
+    if (sortCol === 'ticker') return sortAsc ? a.ticker.localeCompare(b.ticker) : b.ticker.localeCompare(a.ticker);
+    if (sortCol === 'signal') { const va = isBuy(a.signal)?0:1, vb = isBuy(b.signal)?0:1; return sortAsc ? va-vb : vb-va; }
+    if (sortCol === 'recency') { const va = sandclocks(a.range,runDate).val, vb = sandclocks(b.range,runDate).val; return sortAsc ? va-vb : vb-va; }
+    if (sortCol === 'flow') { const va = parseAmt(a.flow), vb = parseAmt(b.flow); return sortAsc ? va-vb : vb-va; }
+    return 0;
+  });
+
+  document.getElementById('cnt-scan').textContent = rows.length + ' ' + t('stocks');
+  document.getElementById('tbody-scan').innerHTML = sorted.map(r => {
+    const buy = isBuy(r.signal);
+    const cls = buy ? 'buy' : 'sell';
+    const clocks = sandclocks(r.range, runDate);
+    return `<tr>
+      <td class="td-ticker ${cls}">${r.ticker}</td>
+      <td><span class="signal-badge ${cls}">${r.signal}</span></td>
+      <td class="strength">${clocks.icon}</td>
+      <td class="flow ${cls}">${fmtMoney(r.flow)}</td>
+      <td class="insight">${r.insight}</td>
+      <td class="daterange">${r.range}</td>
+    </tr>`;
+  }).join('');
 }
 
 async function load() {
@@ -463,28 +603,12 @@ async function load() {
     if (data.error) throw new Error(data.error);
 
     runDate = data.run_date || '';
+    englishOutput = data.output || '';
+
     document.getElementById('run-date').innerHTML =
-      `<span class="status-dot"></span>Last run: <strong>${runDate}</strong>`;
+      `<span class="status-dot"></span>${t('lastRun')}: <strong>${runDate}</strong>`;
 
-    const text = data.output || '';
-    const p1 = text.split('### Part 2')[0] || '';
-    const p2 = (text.split('### Part 2')[1] || '').split('### Part 3')[0] || '';
-    const p3 = text.split('### Part 3')[1] || '';
-
-    const buys = parseConvictionGrouped(p1);
-    document.getElementById('cnt-buys').textContent = buys.length;
-    document.getElementById('grid-buys').innerHTML = buys.length
-      ? buys.map((g,i) => buyCard(g, i, runDate)).join('')
-      : '<div class="none-msg">No hot buy signals in the last 14 days.</div>';
-
-    const sells = parseDumpsGrouped(p2);
-    document.getElementById('cnt-sells').textContent = sells.length;
-    document.getElementById('grid-sells').innerHTML = sells.length
-      ? sells.map((g,i) => sellCard(g, i, runDate)).join('')
-      : '<div class="none-msg">No notable sells in the last 14 days.</div>';
-
-    allRows = parseTable(p3);
-    document.getElementById('cnt-scan').textContent = allRows.length + ' stocks';
+    rebuildCards();
     renderTable();
 
     document.getElementById('loading').style.display = 'none';
