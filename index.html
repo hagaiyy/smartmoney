@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartMoney — Insider Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --buy: #00e5a0;
+    --buy-bg: rgba(0,229,160,0.08);
+    --buy-border: rgba(0,229,160,0.2);
+    --sell: #ff4d6d;
+    --sell-bg: rgba(255,77,109,0.08);
+    --sell-border: rgba(255,77,109,0.2);
+    --hot: #ff9500;
+    --warm: #ffcc00;
+    --accent: #7b5ea7;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* Header */
+  header {
+    padding: 48px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    letter-spacing: 3px;
+    line-height: 1;
+    background: linear-gradient(135deg, #fff 0%, #7b5ea7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .logo span {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, #00e5a0 0%, #7b5ea7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header-right { text-align: right; }
+
+  .last-run {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+
+  .last-run strong {
+    color: var(--buy);
+    font-weight: 500;
+  }
+
+  .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--buy);
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Loading */
+  #loading {
+    text-align: center;
+    padding: 120px 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 20px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Error */
+  #error {
+    display: none;
+    text-align: center;
+    padding: 80px 0;
+    color: var(--sell);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 56px;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .section.visible { opacity: 1; transform: translateY(0); }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-icon { font-size: 20px; }
+
+  .section-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .section-count {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* Conviction cards */
+  .conviction-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+
+  .conviction-card {
+    background: var(--buy-bg);
+    border: 1px solid var(--buy-border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .conviction-card:hover {
+    border-color: var(--buy);
+    transform: translateY(-2px);
+  }
+
+  .conviction-ticker {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 2px;
+    color: var(--buy);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .conviction-amount {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--buy);
+    margin-bottom: 10px;
+    opacity: 0.8;
+  }
+
+  .conviction-who {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .conviction-why {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  /* Dump cards */
+  .dump-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .dump-card {
+    background: var(--sell-bg);
+    border: 1px solid var(--sell-border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr auto;
+    align-items: center;
+    gap: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .dump-card:hover { border-color: var(--sell); }
+
+  .dump-ticker {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 1px;
+    color: var(--sell);
+  }
+
+  .dump-amount {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--sell);
+    opacity: 0.9;
+  }
+
+  .dump-who { font-size: 12px; color: var(--muted); }
+
+  .dump-context {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    white-space: nowrap;
+  }
+
+  .dump-context.routine { background: rgba(107,107,128,0.2); color: var(--muted); }
+  .dump-context.profit { background: rgba(255,149,0,0.15); color: var(--hot); }
+  .dump-context.panic { background: rgba(255,77,109,0.2); color: var(--sell); }
+
+  /* Market scan table */
+  .scan-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead tr {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border2);
+  }
+
+  thead th {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 500;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+  td { padding: 12px 16px; }
+
+  .td-ticker {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 1px;
+  }
+
+  .td-ticker.buy { color: var(--buy); }
+  .td-ticker.sell { color: var(--sell); }
+
+  .signal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .signal-badge.buy { background: var(--buy-bg); color: var(--buy); border: 1px solid var(--buy-border); }
+  .signal-badge.sell { background: var(--sell-bg); color: var(--sell); border: 1px solid var(--sell-border); }
+
+  .strength { font-size: 16px; }
+
+  .flow {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+  .flow.buy { color: var(--buy); }
+  .flow.sell { color: var(--sell); }
+
+  .insight { color: var(--text); font-size: 12px; }
+  .daterange { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .legend-item {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .none-msg {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 20px;
+    text-align: center;
+    border: 1px dashed var(--border2);
+    border-radius: 8px;
+  }
+
+  @media (max-width: 600px) {
+    .dump-card { grid-template-columns: 70px 1fr; }
+    .dump-context { display: none; }
+    .logo { font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="logo">Smart<span>Money</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px;letter-spacing:0.5px;">Insider Trading Intelligence · SEC Form 4 · AI Analysis</div>
+    </div>
+    <div class="header-right">
+      <div class="last-run" id="run-date"><span class="status-dot"></span>Loading...</div>
+    </div>
+  </header>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    FETCHING INTELLIGENCE...
+  </div>
+
+  <div id="error">⚠ Failed to load data. Please try again later.</div>
+
+  <div id="content" style="display:none">
+    <!-- Part 1 -->
+    <div class="section" id="sec1">
+      <div class="section-header">
+        <span class="section-icon">🔥</span>
+        <span class="section-title">Top Conviction Signals</span>
+        <span class="section-count" id="count1"></span>
+      </div>
+      <div class="conviction-grid" id="grid1"></div>
+    </div>
+
+    <!-- Part 2 -->
+    <div class="section" id="sec2">
+      <div class="section-header">
+        <span class="section-icon">⚠️</span>
+        <span class="section-title">Notable Dumping</span>
+        <span class="section-count" id="count2"></span>
+      </div>
+      <div class="dump-list" id="list2"></div>
+    </div>
+
+    <!-- Part 3 -->
+    <div class="section" id="sec3">
+      <div class="section-header">
+        <span class="section-icon">📊</span>
+        <span class="section-title">Market Scan · Last 45 Days</span>
+        <span class="section-count" id="count3"></span>
+      </div>
+      <div class="scan-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Signal</th>
+              <th>Strength</th>
+              <th>Net Flow</th>
+              <th>Key Insight</th>
+              <th>Date Range</th>
+            </tr>
+          </thead>
+          <tbody id="tbody3"></tbody>
+        </table>
+      </div>
+      <div class="legend">
+        <div class="legend-item">🔥 Last 14 days (Hot)</div>
+        <div class="legend-item">⚠️ 15–45 days (Warm)</div>
+        <div class="legend-item"><span style="color:var(--buy)">📈 BUY</span> Insider buying</div>
+        <div class="legend-item"><span style="color:var(--sell)">📉 SELL</span> Insider selling</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'https://smart-money-backend.vercel.app/';
+
+function fmt(n) {
+  const abs = Math.abs(n);
+  if (abs >= 1e6) return (n < 0 ? '-' : '+') + '$' + (abs/1e6).toFixed(1) + 'M';
+  if (abs >= 1e3) return (n < 0 ? '-' : '+') + '$' + (abs/1e3).toFixed(0) + 'K';
+  return (n < 0 ? '-' : '+') + '$' + abs.toFixed(0);
+}
+
+function parseConviction(text) {
+  const lines = text.split('\n').filter(l => l.trim().startsWith('* **$'));
+  return lines.map(l => {
+    const ticker = (l.match(/\*\*\$(\w+)\*\*/) || [])[1] || '';
+    const amount = (l.match(/\|\s*([+\-]\$[\d,\.]+)/) || [])[1] || '';
+    const who = (l.match(/\*\*Who:\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
+    const why = (l.match(/\*\*Why:\*\*\s*(.+)$/) || [])[1]?.trim() || '';
+    return { ticker, amount, who, why };
+  });
+}
+
+function parseDump(text) {
+  const lines = text.split('\n').filter(l => l.trim().startsWith('* **$'));
+  return lines.map(l => {
+    const ticker = (l.match(/\*\*\$(\w+)\*\*/) || [])[1] || '';
+    const amount = (l.match(/\|\s*([+\-]\$[\d,\.]+)/) || [])[1] || '';
+    const who = (l.match(/\*\*Who:\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
+    const ctx = (l.match(/\*\*Context:\*\*\s*(.+)$/) || [])[1]?.trim() || '';
+    return { ticker, amount, who, ctx };
+  });
+}
+
+function parseTable(text) {
+  const lines = text.split('\n').filter(l => l.startsWith('|') && !l.includes(':---'));
+  if (lines.length < 2) return [];
+  return lines.slice(1).map(l => {
+    const cols = l.split('|').map(c => c.trim()).filter(Boolean);
+    return {
+      ticker: cols[0] || '',
+      signal: cols[1] || '',
+      strength: cols[2] || '',
+      flow: cols[3] || '',
+      insight: cols[4] || '',
+      range: cols[5] || ''
+    };
+  }).filter(r => r.ticker && r.ticker !== 'SYM');
+}
+
+function isBuy(signal) {
+  return signal.includes('BUY') || signal.includes('📈');
+}
+
+function contextClass(ctx) {
+  const c = ctx.toLowerCase();
+  if (c.includes('panic')) return 'panic';
+  if (c.includes('profit')) return 'profit';
+  return 'routine';
+}
+
+function show() {
+  setTimeout(() => document.getElementById('sec1').classList.add('visible'), 100);
+  setTimeout(() => document.getElementById('sec2').classList.add('visible'), 250);
+  setTimeout(() => document.getElementById('sec3').classList.add('visible'), 400);
+}
+
+async function load() {
+  try {
+    const res = await fetch(API);
+    const data = await res.json();
+
+    if (data.error) throw new Error(data.error);
+
+    // Run date
+    document.getElementById('run-date').innerHTML =
+      `<span class="status-dot"></span>Last run: <strong>${data.run_date}</strong>`;
+
+    const text = data.output || '';
+
+    // Split into parts
+    const p1 = text.split('### Part 2')[0] || '';
+    const p2 = (text.split('### Part 2')[1] || '').split('### Part 3')[0] || '';
+    const p3 = text.split('### Part 3')[1] || '';
+
+    // Part 1 — conviction
+    const convictions = parseConviction(p1);
+    const g1 = document.getElementById('grid1');
+    document.getElementById('count1').textContent = convictions.length + ' signals';
+    if (convictions.length === 0) {
+      g1.innerHTML = '<div class="none-msg">No hot buy signals in the last 14 days.</div>';
+    } else {
+      g1.innerHTML = convictions.map(c => `
+        <div class="conviction-card">
+          <div class="conviction-ticker">${c.ticker}</div>
+          <div class="conviction-amount">${c.amount}</div>
+          <div class="conviction-who">${c.who}</div>
+          <div class="conviction-why">${c.why}</div>
+        </div>`).join('');
+    }
+
+    // Part 2 — dumps
+    const dumps = parseDump(p2);
+    const l2 = document.getElementById('list2');
+    document.getElementById('count2').textContent = dumps.length + ' transactions';
+    if (dumps.length === 0) {
+      l2.innerHTML = '<div class="none-msg">No notable dumps in the last 14 days.</div>';
+    } else {
+      l2.innerHTML = dumps.map(d => `
+        <div class="dump-card">
+          <div class="dump-ticker">${d.ticker}</div>
+          <div class="dump-amount">${d.amount}</div>
+          <div class="dump-who">${d.who}</div>
+          <span class="dump-context ${contextClass(d.ctx)}">${d.ctx}</span>
+        </div>`).join('');
+    }
+
+    // Part 3 — table
+    const rows = parseTable(p3);
+    const tb = document.getElementById('tbody3');
+    document.getElementById('count3').textContent = rows.length + ' stocks';
+    tb.innerHTML = rows.map(r => {
+      const buy = isBuy(r.signal);
+      const cls = buy ? 'buy' : 'sell';
+      return `<tr>
+        <td class="td-ticker ${cls}">${r.ticker}</td>
+        <td><span class="signal-badge ${cls}">${r.signal}</span></td>
+        <td class="strength">${r.strength}</td>
+        <td class="flow ${cls}">${r.flow}</td>
+        <td class="insight">${r.insight}</td>
+        <td class="daterange">${r.range}</td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    show();
+
+  } catch(e) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = '⚠ ' + e.message;
+  }
+}
+
+load();
+</script>
+</body>
+</html>
