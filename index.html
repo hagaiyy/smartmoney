@@ -453,15 +453,15 @@ function parseConvictionGrouped(text) {
     const ticker = (l.match(/\*\*\$(\w+)\*\*/) || [])[1] || '';
     const amtRaw = (l.match(/\|\s*([+\-]\$[\d,\.]+)/) || [])[1] || '0';
     const amt = parseAmt(amtRaw);
-    const whoMatch = l.match(/\*\*(?:Who|מי):\*\*\s*([^|]+)/);
-    const who = whoMatch ? whoMatch[1].trim() : '';
-    const whyMatch = l.match(/\*\*(?:Why|למה):\*\*\s*(.+)$/);
-    const why = whyMatch ? whyMatch[1].trim() : '';
+    const who = (l.match(/\*\*(?:Who|מי):\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
+    const role = (l.match(/\*\*(?:Role|תפקיד):\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
+    const date = (l.match(/\*\*(?:Date|תאריך):\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
+    const why = (l.match(/\*\*(?:Why|למה):\*\*\s*(.+)$/) || [])[1]?.trim() || '';
     if (!ticker) return;
     if (!map[ticker]) map[ticker] = { ticker, total: 0, count: 0, txs: [] };
     map[ticker].total += amt;
     map[ticker].count++;
-    map[ticker].txs.push({ who, why, amt });
+    map[ticker].txs.push({ who, role, date, why, amt });
   });
   return Object.values(map).sort((a,b) => b.total - a.total);
 }
@@ -473,16 +473,16 @@ function parseDumpsGrouped(text) {
     const ticker = (l.match(/\*\*\$(\w+)\*\*/) || [])[1] || '';
     const amtRaw = (l.match(/\|\s*([+\-]\$[\d,\.]+)/) || [])[1] || '0';
     const amt = parseAmt(amtRaw);
-    const whoMatch = l.match(/\*\*(?:Who|מי):\*\*\s*([^|]+)/);
-    const who = whoMatch ? whoMatch[1].trim() : '';
-    const ctxMatch = l.match(/\*\*(?:Context|הקשר):\*\*\s*(.+)$/);
-    const ctx = ctxMatch ? ctxMatch[1].trim() : '';
+    const who = (l.match(/\*\*(?:Who|מי):\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
+    const role = (l.match(/\*\*(?:Role|תפקיד):\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
+    const date = (l.match(/\*\*(?:Date|תאריך):\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
+    const ctx = (l.match(/\*\*(?:Context|הקשר):\*\*\s*(.+)$/) || [])[1]?.trim() || '';
     if (!ticker) return;
     if (!map[ticker]) map[ticker] = { ticker, total: 0, count: 0, ctx, txs: [] };
     map[ticker].total += amt;
     map[ticker].count++;
     if (ctx && !ctx.toLowerCase().includes('routine') && !ctx.includes('שגרה')) map[ticker].ctx = ctx;
-    map[ticker].txs.push({ who, ctx, amt });
+    map[ticker].txs.push({ who, role, date, ctx, amt });
   });
   return Object.values(map).sort((a,b) => a.total - b.total);
 }
@@ -506,9 +506,10 @@ function buyCard(g, idx) {
   const drillRows = g.txs.map(tx => `
     <div class="drill-row">
       <div class="drill-name">${tx.who}</div>
+      ${tx.role ? `<div style="font-size:11px;color:var(--muted);margin-bottom:3px">${tx.role}</div>` : ''}
       <div class="drill-meta">
         <span class="drill-amt buy">${fmtMoney(tx.amt)}</span>
-        <span class="drill-date">${runDate}</span>
+        <span class="drill-date">${tx.date || runDate}</span>
       </div>
       ${tx.why ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic">${tx.why}</div>` : ''}
     </div>`).join('');
@@ -528,9 +529,10 @@ function sellCard(g, idx) {
   const drillRows = g.txs.map(tx => `
     <div class="drill-row">
       <div class="drill-name">${tx.who}</div>
+      ${tx.role ? `<div style="font-size:11px;color:var(--muted);margin-bottom:3px">${tx.role}</div>` : ''}
       <div class="drill-meta">
         <span class="drill-amt sell">${fmtMoney(tx.amt)}</span>
-        <span class="drill-date">${runDate}</span>
+        <span class="drill-date">${tx.date || runDate}</span>
       </div>
       <span class="ctx-badge ${contextClass(tx.ctx)}">${tx.ctx}</span>
     </div>`).join('');
