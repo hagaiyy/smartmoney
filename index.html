@@ -13,7 +13,7 @@
     --border: rgba(255,255,255,0.07);
     --border2: rgba(255,255,255,0.12);
     --text: #e8e8f0;
-    --muted: #6b6b80;
+    --muted: #9b9baf;
     --buy: #00e5a0;
     --buy-bg: rgba(0,229,160,0.08);
     --buy-border: rgba(0,229,160,0.2);
@@ -87,44 +87,24 @@
   .agg-total.sell { color: var(--sell); }
   .agg-txcount { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
 
-  .drill-toggle {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 10px;
-    font-size: 11px;
-    font-family: 'DM Mono', monospace;
-    color: var(--muted);
-    user-select: none;
-  }
-
+  .drill-toggle { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); user-select: none; }
   .drill-arrow { transition: transform 0.2s; display: inline-block; }
   .drill-arrow.open { transform: rotate(90deg); }
 
-  .drill-panel {
-    display: none;
-    border-top: 1px solid var(--border2);
-    padding: 0;
-  }
-
+  .drill-panel { display: none; border-top: 1px solid var(--border2); }
   .drill-panel.open { display: block; }
 
-  .drill-row {
-    padding: 10px 18px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-  }
-
+  .drill-row { padding: 10px 18px; border-bottom: 1px solid var(--border); font-size: 12px; }
   .drill-row:last-child { border-bottom: none; }
-
-  .drill-name { color: var(--text); margin-bottom: 2px; font-weight: 400; }
+  .drill-name { color: var(--text); margin-bottom: 3px; font-weight: 400; }
+  .drill-meta { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
   .drill-amt { font-family: 'DM Mono', monospace; font-size: 11px; }
   .drill-amt.buy { color: var(--buy); }
   .drill-amt.sell { color: var(--sell); }
-  .drill-detail { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .drill-date { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
 
-  .ctx-badge { display: inline-block; font-size: 10px; font-family: 'DM Mono', monospace; padding: 2px 7px; border-radius: 4px; margin-top: 6px; }
-  .ctx-badge.routine { background: rgba(107,107,128,0.2); color: var(--muted); }
+  .ctx-badge { display: inline-block; font-size: 10px; font-family: 'DM Mono', monospace; padding: 2px 7px; border-radius: 4px; margin-top: 4px; }
+  .ctx-badge.routine { background: rgba(155,155,175,0.15); color: var(--muted); }
   .ctx-badge.profit { background: rgba(255,149,0,0.15); color: var(--hot); }
   .ctx-badge.panic { background: rgba(255,77,109,0.2); color: var(--sell); }
 
@@ -155,10 +135,11 @@
 
   .insight { color: var(--text); font-size: 12px; }
   .daterange { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); white-space: nowrap; }
-  .strength { font-size: 15px; }
+  .strength { font-size: 15px; letter-spacing: 1px; }
 
   .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 14px; padding: 10px 14px; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border); }
   .legend-item { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+
   .none-msg { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); padding: 24px; text-align: center; border: 1px dashed var(--border2); border-radius: 8px; }
 
   @media (max-width: 600px) {
@@ -183,7 +164,7 @@
   <div id="content" style="display:none">
     <div class="section" id="sec-hot">
       <div class="hot-label">🔥 Hot Signals</div>
-      <div class="hot-note">Insider activity from the last 14 days only · aggregated by stock · click any card to see individual transactions</div>
+      <div class="hot-note">Insider activity from the last 14 days only · aggregated by stock · click any card to drill down</div>
       <div class="tabs">
         <button class="tab active buy" onclick="switchTab('buys')" id="tab-buys">📈 Hot Buys <span class="tab-count" id="cnt-buys">0</span></button>
         <button class="tab sell" onclick="switchTab('sells')" id="tab-sells">📉 Hot Sells <span class="tab-count" id="cnt-sells">0</span></button>
@@ -200,13 +181,15 @@
       </div>
       <div class="scan-table-wrap">
         <table>
-          <thead><tr><th>Ticker</th><th>Signal</th><th>Strength</th><th>Net Flow</th><th>Key Insight</th><th>Date Range</th></tr></thead>
+          <thead><tr><th>Ticker</th><th>Signal</th><th>Recency</th><th>Net Flow</th><th>Key Insight</th><th>Date Range</th></tr></thead>
           <tbody id="tbody-scan"></tbody>
         </table>
       </div>
       <div class="legend">
-        <div class="legend-item">🔥 Last 14 days (Hot)</div>
-        <div class="legend-item">⚠️ 15–45 days (Warm)</div>
+        <div class="legend-item">⏳ Under 5 days</div>
+        <div class="legend-item">⏳⏳ 5–14 days</div>
+        <div class="legend-item">⏳⏳⏳ 15–30 days</div>
+        <div class="legend-item">⏳⏳⏳⏳ 31–45 days</div>
         <div class="legend-item"><span style="color:var(--buy)">📈 BUY</span> Insider buying</div>
         <div class="legend-item"><span style="color:var(--sell)">📉 SELL</span> Insider selling</div>
       </div>
@@ -248,11 +231,30 @@ function fmtMoney(raw) {
 }
 
 function parseAmt(str) { return parseFloat(String(str).replace(/[^0-9.\-]/g, '')) || 0; }
+
 function contextClass(ctx) {
   const c = (ctx||'').toLowerCase();
   if (c.includes('panic')) return 'panic';
   if (c.includes('profit')) return 'profit';
   return 'routine';
+}
+
+// Calculate sandclock rating from a date range string like "2026-03-13 – 2026-03-18"
+// Uses the most recent date (end date) to calculate age from today
+function sandclocks(dateRange, runDate) {
+  try {
+    const parts = dateRange.split('–').map(s => s.trim());
+    const latest = parts[parts.length - 1];
+    const base = runDate ? new Date(runDate) : new Date();
+    const txDate = new Date(latest);
+    const days = Math.round((base - txDate) / (1000 * 60 * 60 * 24));
+    if (days <= 5)  return '⏳';
+    if (days <= 14) return '⏳⏳';
+    if (days <= 30) return '⏳⏳⏳';
+    return '⏳⏳⏳⏳';
+  } catch(e) {
+    return '⏳⏳';
+  }
 }
 
 function parseConvictionGrouped(text) {
@@ -268,7 +270,7 @@ function parseConvictionGrouped(text) {
     if (!map[ticker]) map[ticker] = { ticker, total: 0, count: 0, txs: [] };
     map[ticker].total += amt;
     map[ticker].count++;
-    map[ticker].txs.push({ who, why, amt, amtRaw });
+    map[ticker].txs.push({ who, why, amt });
   });
   return Object.values(map).sort((a,b) => b.total - a.total);
 }
@@ -287,7 +289,7 @@ function parseDumpsGrouped(text) {
     map[ticker].total += amt;
     map[ticker].count++;
     if (ctx && ctx !== 'Routine') map[ticker].ctx = ctx;
-    map[ticker].txs.push({ who, ctx, amt, amtRaw });
+    map[ticker].txs.push({ who, ctx, amt });
   });
   return Object.values(map).sort((a,b) => a.total - b.total);
 }
@@ -301,13 +303,18 @@ function parseTable(text) {
   }).filter(r => r.ticker && r.ticker !== 'SYM' && r.ticker !== 'Ticker');
 }
 
-function buyCard(g, idx) {
+function buyCard(g, idx, runDate) {
   const id = 'buy-' + idx;
+  // Use run date as proxy for "today" since hot buys are last 14 days
+  const clocks = sandclocks(runDate + ' – ' + runDate, runDate);
   const drillRows = g.txs.map(tx => `
     <div class="drill-row">
       <div class="drill-name">${tx.who}</div>
-      <div class="drill-amt buy">${fmtMoney(tx.amt)}</div>
-      ${tx.why ? `<div class="drill-detail">${tx.why}</div>` : ''}
+      <div class="drill-meta">
+        <span class="drill-amt buy">${fmtMoney(tx.amt)}</span>
+        <span class="drill-date">${runDate}</span>
+      </div>
+      ${tx.why ? `<div class="drill-detail" style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic">${tx.why}</div>` : ''}
     </div>`).join('');
 
   return `<div class="agg-card buy">
@@ -324,12 +331,15 @@ function buyCard(g, idx) {
   </div>`;
 }
 
-function sellCard(g, idx) {
+function sellCard(g, idx, runDate) {
   const id = 'sell-' + idx;
   const drillRows = g.txs.map(tx => `
     <div class="drill-row">
       <div class="drill-name">${tx.who}</div>
-      <div class="drill-amt sell">${fmtMoney(tx.amt)}</div>
+      <div class="drill-meta">
+        <span class="drill-amt sell">${fmtMoney(tx.amt)}</span>
+        <span class="drill-date">${runDate}</span>
+      </div>
       <span class="ctx-badge ${contextClass(tx.ctx)}">${tx.ctx}</span>
     </div>`).join('');
 
@@ -354,8 +364,9 @@ async function load() {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
+    const runDate = data.run_date || '';
     document.getElementById('run-date').innerHTML =
-      `<span class="status-dot"></span>Last run: <strong>${data.run_date}</strong>`;
+      `<span class="status-dot"></span>Last run: <strong>${runDate}</strong>`;
 
     const text = data.output || '';
     const p1 = text.split('### Part 2')[0] || '';
@@ -365,13 +376,13 @@ async function load() {
     const buys = parseConvictionGrouped(p1);
     document.getElementById('cnt-buys').textContent = buys.length;
     document.getElementById('grid-buys').innerHTML = buys.length
-      ? buys.map((g,i) => buyCard(g,i)).join('')
+      ? buys.map((g,i) => buyCard(g, i, runDate)).join('')
       : '<div class="none-msg">No hot buy signals in the last 14 days.</div>';
 
     const sells = parseDumpsGrouped(p2);
     document.getElementById('cnt-sells').textContent = sells.length;
     document.getElementById('grid-sells').innerHTML = sells.length
-      ? sells.map((g,i) => sellCard(g,i)).join('')
+      ? sells.map((g,i) => sellCard(g, i, runDate)).join('')
       : '<div class="none-msg">No notable sells in the last 14 days.</div>';
 
     const rows = parseTable(p3).sort((a,b) => a.ticker.localeCompare(b.ticker));
@@ -379,10 +390,11 @@ async function load() {
     document.getElementById('tbody-scan').innerHTML = rows.map(r => {
       const buy = isBuy(r.signal);
       const cls = buy ? 'buy' : 'sell';
+      const clocks = sandclocks(r.range, runDate);
       return `<tr>
         <td class="td-ticker ${cls}">${r.ticker}</td>
         <td><span class="signal-badge ${cls}">${r.signal}</span></td>
-        <td class="strength">${r.strength}</td>
+        <td class="strength">${clocks}</td>
         <td class="flow ${cls}">${fmtMoney(r.flow)}</td>
         <td class="insight">${r.insight}</td>
         <td class="daterange">${r.range}</td>
