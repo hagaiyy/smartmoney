@@ -446,12 +446,23 @@ function updateSortHeaders() {
   });
 }
 
+function isTemplateLine(l) {
+  // Filter out format-example lines that Gemini echoes back from the prompt
+  return l.includes('$TICKER') || l.includes('+$Amount') || l.includes('-$Amount') || l.includes('[Full Name]') || l.includes('[e.g.');
+}
+
+function isTransactionLine(l) {
+  const t = l.trim();
+  // Match both "* **$TICKER**" and "**$TICKER**" formats
+  return (t.startsWith('* **$') || t.startsWith('**$')) && !isTemplateLine(t);
+}
+
 function parseConvictionGrouped(text) {
-  const lines = text.split('\n').filter(l => l.trim().startsWith('* **$'));
+  const lines = text.split('\n').filter(l => isTransactionLine(l));
   const map = {};
   lines.forEach(l => {
     const ticker = (l.match(/\*\*\$(\w+)\*\*/) || [])[1] || '';
-    const amtRaw = (l.match(/\|\s*([+\-]\$[\d,\.]+)/) || [])[1] || '0';
+    const amtRaw = (l.match(/\|\s*([+\-]?\$[\d,\.]+)/) || [])[1] || '0';
     const amt = parseAmt(amtRaw);
     const who = (l.match(/\*\*(?:Who|מי):\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
     const role = (l.match(/\*\*(?:Role|תפקיד):\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
@@ -467,11 +478,11 @@ function parseConvictionGrouped(text) {
 }
 
 function parseDumpsGrouped(text) {
-  const lines = text.split('\n').filter(l => l.trim().startsWith('* **$'));
+  const lines = text.split('\n').filter(l => isTransactionLine(l));
   const map = {};
   lines.forEach(l => {
     const ticker = (l.match(/\*\*\$(\w+)\*\*/) || [])[1] || '';
-    const amtRaw = (l.match(/\|\s*([+\-]\$[\d,\.]+)/) || [])[1] || '0';
+    const amtRaw = (l.match(/\|\s*([+\-]?\$[\d,\.]+)/) || [])[1] || '0';
     const amt = parseAmt(amtRaw);
     const who = (l.match(/\*\*(?:Who|מי):\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
     const role = (l.match(/\*\*(?:Role|תפקיד):\*\*\s*([^|]+)/) || [])[1]?.trim() || '';
@@ -490,10 +501,30 @@ function parseDumpsGrouped(text) {
 function parseTable(text) {
   const lines = text.split('\n').filter(l => l.startsWith('|') && !l.includes(':---'));
   if (lines.length < 2) return [];
-  return lines.slice(1).map(l => {
+  const raw = lines.slice(1).map(l => {
     const c = l.split('|').map(x => x.trim()).filter(Boolean);
     return { ticker: c[0]||'', signal: c[1]||'', strength: c[2]||'', flow: c[3]||'', insight: c[4]||'', range: c[5]||'' };
-  }).filter(r => r.ticker && r.ticker !== 'SYM' && r.ticker !== 'Ticker' && r.ticker !== 'סימול');
+  }).filter(r => r.ticker && r.ticker !== 'SYM' && r.ticker !== 'Ticker' && r.ticker !== 'סימול' && r.ticker !== '[SYM]');
+
+  // Deduplicate: if the same ticker appears multiple times, keep the row with the
+  // largest absolute net flow (most significant entry) and merge the date range.
+  const map = {};
+  raw.forEach(r => {
+    const key = r.ticker;
+    if (!map[key]) { map[key] = { ...r }; return; }
+    const existing = map[key];
+    // Prefer the row with higher absolute flow
+    if (Math.abs(parseAmt(r.flow)) > Math.abs(parseAmt(existing.flow))) {
+      map[key] = { ...r };
+    }
+    // Widen the date range to cover all rows for this ticker
+    const allDates = [existing.range, r.range].join(' ').match(/\d{4}-\d{2}-\d{2}/g) || [];
+    if (allDates.length >= 2) {
+      allDates.sort();
+      map[key].range = allDates[0] + ' – ' + allDates[allDates.length - 1];
+    }
+  });
+  return Object.values(map);
 }
 
 function txCount(n) {
